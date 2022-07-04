@@ -12,28 +12,39 @@ package protocol;
 service Connect {
   // 该服务包含一个 SayHello 方法 HelloRequest、HelloReply分别为该方法的输入与输出
   rpc SayHello (HelloRequest) returns (HelloReply) {}
-  // getResults 得到 发送的一组数的最大值最小值和平均值
-  rpc getResults(stream Data) returns (stream EchoResponse);
+  // getResults 得到 发送的多组数的最大值最小值和平均值
+  rpc getResults(stream GrpcRequest) returns (stream Response);
+  rpc getResults1(stream Request) returns (stream Response);
 }
 // 具体的参数定义
 message HelloRequest {
   string name = 1;
   int32 age = 2;
-  Data data = 3; // 传递的数据的顺序从上到下排列，类型也可以是结构体
+  Request data = 3; // 传递的数据的顺序从上到下排列，类型也可以是结构体
 }
 
 message HelloReply {
   string message = 1;
 }
 
-message Data {
-    string message = 1; // message在data.pb.go里会变成Message
-    repeated int32 array = 2; // 发送一组数
+
+message GrpcRequest {
+  repeated Request reqs = 1;// 里面放多个数组
 }
 
-message EchoResponse {  // 一组数的最大值最小值平均值
-  string message = 1;
-  int32 max = 2;
-  int32 min = 3;
-  int32 avg = 4;
+message Request {
+    int32 id = 1; // 此数组的ID
+    repeated int32 data = 2; // 发送一组数
+}
+
+message GrpcResponse {
+  repeated Response resps = 1; // 里面放多个数组的计算结果
+}
+
+message Response {  // 一组数的最大值最小值平均值
+  int32 id = 1; // 对应数组的ID
+  repeated int32 data = 2;
+  int32 max = 3;
+  int32 min = 4;
+  int32 avg = 5;
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -8,8 +9,8 @@ import (
 	ct "project01/taskbatcher"
 	pb "project01/utils/protocol"
 	"sync"
+	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -33,7 +34,7 @@ type server struct {
 // 实现.proto文件中定义SayHello方法
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	log.Println("request: ", in.Name, in.Data)
-	return &pb.HelloReply{Message: "Hello " + in.Name + in.Data.Message}, nil
+	return &pb.HelloReply{Message: "Hello " + in.Name + in.Data.String()}, nil
 }
 
 //实现GetResults方法 双向流
@@ -49,22 +50,24 @@ func (s *server) GetResults(stream pb.Connect_GetResultsServer) error {
 	// TODO
 	var (
 		waitGroup sync.WaitGroup
-		msgCh     = make(chan []int32)
+		reqCh     = make(chan pb.Request)
 	)
 
 	waitGroup.Add(1)
 	go func() {
 		defer waitGroup.Done()
-		for arr := range msgCh {
+		for req := range reqCh {
 
-			//获取客户端的数据v，传给calTask进行计算
+			//获取客户端的数据arr，传给calTask进行计算
 			calTask := &ct.CalTask{
-				Data: arr,
+				Data: req.Data,
 			}
-			err := stream.Send(&pb.EchoResponse{
-				Max: <-calTask.GetMax(),
-				Min: <-calTask.GetMin(),
-				Avg: <-calTask.GetAverage(),
+			err := stream.Send(&pb.Response{
+				Id:   req.Id,
+				Data: req.Data,
+				Max:  <-calTask.GetMax(),
+				Min:  <-calTask.GetMin(),
+				Avg:  <-calTask.GetAverage(),
 			})
 
 			if err != nil {
@@ -78,22 +81,103 @@ func (s *server) GetResults(stream pb.Connect_GetResultsServer) error {
 	go func() {
 		defer waitGroup.Done()
 		for {
-			req, err := stream.Recv()
+			reqs, err := stream.Recv() // 接收请求的数据
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
 				log.Fatalf("recv error:%v", err)
 			}
-			fmt.Printf("Recved : %v\n", req.GetArray())
-			msgCh <- req.GetArray()
+
+			fmt.Printf("Recved : %v\n", reqs.Reqs)
+			i := 0
+			reqCh <- *reqs.Reqs[i]
+			i++
 		}
-		close(msgCh)
+		close(reqCh)
 	}()
 	waitGroup.Wait()
 
 	//返回nil表示已经完成响应
 	return nil
+}
+
+func (s *server) GetResults1(stream pb.Connect_GetResults1Server) error {
+	// TODO
+	var (
+		waitGroup sync.WaitGroup
+		reqCh     = make(chan pb.Request)
+		rspCh     = make(chan pb.Response)
+		stopCh    = make(chan struct{})
+	)
+	// 5 means numbers of goroutine
+	for i := 0; i < 5; i++ {
+		workerId := i
+		go worker(workerId, reqCh, rspCh, stopCh)
+	}
+	// len(Request) = len(Response) = 4
+	rsps := make([]pb.Response, 0, 4)
+	waitGroup.Add(1)
+	go func() {
+		defer waitGroup.Done()
+		for rsp := range rspCh {
+			rsps = append(rsps, rsp)
+			fmt.Println(rsp.String())
+			if len(rsps) == 4 {
+				close(stopCh)
+				return
+			}
+			//获取客户端的数据arr，传给calTask进行计算
+			// calTask := &ct.CalTask{
+			// 	Data: req.Data,
+			// }
+			// err := stream.Send(&pb.Response{
+			// 	Id:   req.Id,
+			// 	Data: req.Data,
+			// 	Max:  <-calTask.GetMax(),
+			// 	Min:  <-calTask.GetMin(),
+			// 	Avg:  <-calTask.GetAverage(),
+			// })
+
+			// if err != nil {
+			// 	fmt.Println("Send error:", err)
+			// 	continue
+			// }
+		}
+	}()
+
+	waitGroup.Add(1)
+	go func() {
+		defer waitGroup.Done()
+		for {
+			reqs, err := stream.Recv() // 接收请求的数据
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("recv error:%v", err)
+			}
+
+			fmt.Printf("Recved : %v\n", reqs.Data)
+			i := 0
+			reqCh <- *reqs
+			i++
+		}
+		close(reqCh)
+	}()
+	waitGroup.Wait()
+	// wait for all goroutine exit
+	select {
+	case <-stopCh:
+		fmt.Printf("finish task total: %+v\n", len(rsps))
+	}
+
+	// to see if all goroutine exit
+	time.Sleep(time.Second * 2)
+
+	//返回nil表示已经完成响应
+	return nil
+
 }
 
 func main() {
@@ -108,4 +192,31 @@ func main() {
 	log.Println("rpc服务已经开启")
 
 	s.Serve(lis) //建立连接，开始服务
+}
+
+func worker(workId int, reqCh chan pb.Request, rspCh chan pb.Response, stopCh chan struct{}) {
+	for {
+		select {
+		case req := <-reqCh:
+			fmt.Printf("worker %d is working for task %d\n", workId, req.Id)
+			calTask := ct.CalTask{
+				Data: req.Data,
+			}
+			rspCh <- pb.Response{
+				Id:   req.Id,
+				Data: req.Data,
+				Max:  <-calTask.GetMax(),
+				Min:  <-calTask.GetMin(),
+				Avg:  <-calTask.GetAverage(),
+			}
+			time.Sleep(time.Millisecond * 100)
+
+		case <-stopCh:
+			fmt.Printf("worker %d exit\n", workId)
+			return
+		default:
+			fmt.Printf("worker %d can not get task, will sleep 200ms\n", workId)
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
 }

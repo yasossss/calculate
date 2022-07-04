@@ -24,8 +24,9 @@ const _ = grpc.SupportPackageIsVersion7
 type ConnectClient interface {
 	// 该服务包含一个 SayHello 方法 HelloRequest、HelloReply分别为该方法的输入与输出
 	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
-	// getResults 得到 发送的一组数的最大值最小值和平均值
+	// getResults 得到 发送的多组数的最大值最小值和平均值
 	GetResults(ctx context.Context, opts ...grpc.CallOption) (Connect_GetResultsClient, error)
+	GetResults1(ctx context.Context, opts ...grpc.CallOption) (Connect_GetResults1Client, error)
 }
 
 type connectClient struct {
@@ -55,8 +56,8 @@ func (c *connectClient) GetResults(ctx context.Context, opts ...grpc.CallOption)
 }
 
 type Connect_GetResultsClient interface {
-	Send(*Data) error
-	Recv() (*EchoResponse, error)
+	Send(*GrpcRequest) error
+	Recv() (*Response, error)
 	grpc.ClientStream
 }
 
@@ -64,12 +65,43 @@ type connectGetResultsClient struct {
 	grpc.ClientStream
 }
 
-func (x *connectGetResultsClient) Send(m *Data) error {
+func (x *connectGetResultsClient) Send(m *GrpcRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *connectGetResultsClient) Recv() (*EchoResponse, error) {
-	m := new(EchoResponse)
+func (x *connectGetResultsClient) Recv() (*Response, error) {
+	m := new(Response)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *connectClient) GetResults1(ctx context.Context, opts ...grpc.CallOption) (Connect_GetResults1Client, error) {
+	stream, err := c.cc.NewStream(ctx, &Connect_ServiceDesc.Streams[1], "/protocol.Connect/getResults1", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &connectGetResults1Client{stream}
+	return x, nil
+}
+
+type Connect_GetResults1Client interface {
+	Send(*Request) error
+	Recv() (*Response, error)
+	grpc.ClientStream
+}
+
+type connectGetResults1Client struct {
+	grpc.ClientStream
+}
+
+func (x *connectGetResults1Client) Send(m *Request) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *connectGetResults1Client) Recv() (*Response, error) {
+	m := new(Response)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -82,8 +114,9 @@ func (x *connectGetResultsClient) Recv() (*EchoResponse, error) {
 type ConnectServer interface {
 	// 该服务包含一个 SayHello 方法 HelloRequest、HelloReply分别为该方法的输入与输出
 	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
-	// getResults 得到 发送的一组数的最大值最小值和平均值
+	// getResults 得到 发送的多组数的最大值最小值和平均值
 	GetResults(Connect_GetResultsServer) error
+	GetResults1(Connect_GetResults1Server) error
 	mustEmbedUnimplementedConnectServer()
 }
 
@@ -96,6 +129,9 @@ func (UnimplementedConnectServer) SayHello(context.Context, *HelloRequest) (*Hel
 }
 func (UnimplementedConnectServer) GetResults(Connect_GetResultsServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetResults not implemented")
+}
+func (UnimplementedConnectServer) GetResults1(Connect_GetResults1Server) error {
+	return status.Errorf(codes.Unimplemented, "method GetResults1 not implemented")
 }
 func (UnimplementedConnectServer) mustEmbedUnimplementedConnectServer() {}
 
@@ -133,8 +169,8 @@ func _Connect_GetResults_Handler(srv interface{}, stream grpc.ServerStream) erro
 }
 
 type Connect_GetResultsServer interface {
-	Send(*EchoResponse) error
-	Recv() (*Data, error)
+	Send(*Response) error
+	Recv() (*GrpcRequest, error)
 	grpc.ServerStream
 }
 
@@ -142,12 +178,38 @@ type connectGetResultsServer struct {
 	grpc.ServerStream
 }
 
-func (x *connectGetResultsServer) Send(m *EchoResponse) error {
+func (x *connectGetResultsServer) Send(m *Response) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *connectGetResultsServer) Recv() (*Data, error) {
-	m := new(Data)
+func (x *connectGetResultsServer) Recv() (*GrpcRequest, error) {
+	m := new(GrpcRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Connect_GetResults1_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ConnectServer).GetResults1(&connectGetResults1Server{stream})
+}
+
+type Connect_GetResults1Server interface {
+	Send(*Response) error
+	Recv() (*Request, error)
+	grpc.ServerStream
+}
+
+type connectGetResults1Server struct {
+	grpc.ServerStream
+}
+
+func (x *connectGetResults1Server) Send(m *Response) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *connectGetResults1Server) Recv() (*Request, error) {
+	m := new(Request)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -170,6 +232,12 @@ var Connect_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "getResults",
 			Handler:       _Connect_GetResults_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "getResults1",
+			Handler:       _Connect_GetResults1_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

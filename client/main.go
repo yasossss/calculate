@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"strconv"
-	"strings"
 	"sync"
 
 	pb "project01/utils/protocol"
@@ -24,7 +22,6 @@ const (
 1）首先使用 grpc.Dial() 与 gRPC 服务器建立连接；
 2）使用 pb.NewConnectClient(conn)获取客户端；
 3）通过客户端调用ServiceAPI方法client.SayHello。
-WithTransportCredentials and insecure.NewCredentials()
 */
 func main() {
 	//client端主动发起grpc连接，dial对方
@@ -40,8 +37,9 @@ func main() {
 	if client == nil {
 		log.Fatalf("connect to server with error : %v", err)
 	}
-
-	GetResults(client)
+	fmt.Println("连接成功")
+	// GetResults(client)
+	GetResults1(client)
 }
 
 // 双向流
@@ -54,8 +52,10 @@ func main() {
 4. 发送完毕调用 stream.CloseSend()关闭stream 必须调用关闭 否则Server会一直尝试接收数据 一直报错...
 */
 func GetResults(client pb.ConnectClient) {
-	var waitGroup sync.WaitGroup
 
+	var waitGroup sync.WaitGroup
+	// reqCh := make(chan pb.Request)
+	reqsCh := make(chan *pb.GrpcRequest)
 	// 调用方法获取stream
 	stream, err := client.GetResults(context.Background())
 	if err != nil {
@@ -66,7 +66,7 @@ func GetResults(client pb.ConnectClient) {
 	go func() {
 		defer waitGroup.Done()
 		for {
-			req, err := stream.Recv()
+			rep, err := stream.Recv()
 			if err == io.EOF {
 				fmt.Println("Server Closed")
 				break
@@ -74,38 +74,95 @@ func GetResults(client pb.ConnectClient) {
 			if err != nil {
 				continue
 			}
-			fmt.Println("最大值:", req.GetMax(), "最小值:", req.GetMin(), "平均值:", req.GetAvg())
+			fmt.Println("最大值:", rep.GetMax(), "最小值:", rep.GetMin(), "平均值:", rep.GetAvg())
 		}
 	}()
 
 	waitGroup.Add(1)
 	go func() {
 		defer waitGroup.Done()
-		fmt.Println("请输入一组数(逗号间隔, exit 退出):")
-		for {
-			arr := []int32{}
-			var inputStr string
-			fmt.Scan(&inputStr)
-			if inputStr == "exit" {
-				break
+		for i := 0; i < 4; i++ {
+			arr := [][]int32{{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}, {-1, 2, 100, -5}}
+			req := pb.Request{
+				Id:   int32(i),
+				Data: arr[i],
 			}
-			strArray := strings.Split(inputStr, ",")
-
-			//数组元素添加
-			for _, str := range strArray {
-				num, _ := strconv.Atoi(str)
-				arr = append(arr, int32(num))
+			fmt.Println("req:", req.Id, "req.Data:", req.Data)
+			reqs := pb.GrpcRequest{
+				Reqs: []*pb.Request{&req},
 			}
-			//发送数据给服务端计算
-			err := stream.Send(&pb.Data{Array: arr})
-			if err != nil {
-				log.Printf("send error:%v\n", err)
-			}
+			fmt.Println("reqs:", reqs.Reqs)
+			// TODO
+			reqsCh <- &reqs
+		}
+		reqs := <-reqsCh
+		err := stream.Send(&pb.GrpcRequest{Reqs: reqs.Reqs})
+		fmt.Println("Send()执行完") // =========================无法进入
+		if err != nil {
+			log.Printf("send error:%v\n", err)
 		}
 
 		// 发送完毕关闭stream
-		err := stream.CloseSend()
+		err1 := stream.CloseSend()
+		if err1 != nil {
+			log.Printf("send error:%v\n", err)
+			return
+		}
+	}()
+	waitGroup.Wait()
+}
+
+func GetResults1(client pb.ConnectClient) {
+
+	var waitGroup sync.WaitGroup
+	// reqCh := make(chan pb.Request)
+	// reqsCh := make(chan *pb.GrpcRequest)
+	// 调用方法获取stream
+	stream, err := client.GetResults1(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	// 开两个goroutine 分别用于Recv()和Send()
+	waitGroup.Add(1)
+	go func() {
+		defer waitGroup.Done()
+		for {
+			rep, err := stream.Recv()
+			if err == io.EOF {
+				fmt.Println("Server Closed")
+				break
+			}
+			if err != nil {
+				continue
+			}
+			fmt.Println("最大值:", rep.GetMax(), "最小值:", rep.GetMin(), "平均值:", rep.GetAvg())
+		}
+	}()
+
+	waitGroup.Add(1)
+	go func() {
+		defer waitGroup.Done()
+		for i := 0; i < 4; i++ {
+			arr := [][]int32{{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}, {-1, 2, 100, -5}}
+			err := stream.Send(&pb.Request{
+				Id:   int32(i),
+				Data: arr[i],
+			})
+			if err != nil {
+				log.Printf("send error:%v\n", err)
+			}
+			// TODO
+		}
+		// reqs := <-reqsCh
+		// err := stream.Send(&pb.GrpcRequest{Reqs: reqs.Reqs})
+		fmt.Println("Send()执行完") // =========================无法进入
 		if err != nil {
+			log.Printf("send error:%v\n", err)
+		}
+
+		// 发送完毕关闭stream
+		err1 := stream.CloseSend()
+		if err1 != nil {
 			log.Printf("send error:%v\n", err)
 			return
 		}
