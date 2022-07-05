@@ -6,10 +6,12 @@ import (
 	"io"
 	"log"
 	"net"
-	ct "project01/taskbatcher"
-	pb "project01/utils/protocol"
 	"sync"
 	"time"
+
+	pb "github.com/yasossss/calculate/utils/protocol"
+
+	ct "github.com/yasossss/calculate/taskbatcher"
 
 	"google.golang.org/grpc"
 )
@@ -134,17 +136,30 @@ func (s *server) GetResults1(stream pb.Connect_GetResults1Server) error {
 		go worker(workerId, reqCh, rspCh, stopCh)
 	}
 	// len(Request) = len(Response) = 4
-	rsps := make([]pb.Response, 0, 4)
+	rsps := make([]pb.Response, 0, 10)
 	// waitGroup.Add(1)
 	go func() {
 		// defer waitGroup.Done()
 		for rsp := range rspCh {
-			rsps = append(rsps, *rsp)
+			fmt.Printf("Id:%d Data:%v max:%v min:%v avg:%v\n", rsp.Id, rsp.Data, rsp.Max, rsp.Min, rsp.Avg)
 			// fmt.Println(rsp.String())
-			if len(rsps) == 4 {
+			err := stream.Send(&pb.Response{
+				Id:   rsp.Id,
+				Data: rsp.Data,
+				Max:  rsp.Max,
+				Min:  rsp.Min,
+				Avg:  rsp.Avg,
+			})
+			if err != nil {
+				log.Printf("send error:%v\n", err)
+			}
+
+			rsps = append(rsps, *rsp)
+			if len(rsps) == 10 {
 				close(stopCh)
 				return
 			}
+
 			//获取客户端的数据arr，传给calTask进行计算
 			// calTask := &ct.CalTask{
 			// 	Data: req.Data,
@@ -216,7 +231,7 @@ func worker(workId int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh 
 	for {
 		select {
 		case req := <-reqCh:
-			fmt.Printf("worker %d is working for task %d\n", workId, req.Id)
+			// fmt.Printf("worker %d is working for task %d\n", workId, req.Id)
 			calTask := ct.CalTask{
 				Data: req.Data,
 			}
@@ -227,7 +242,6 @@ func worker(workId int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh 
 				Min:  <-calTask.GetMin(),
 				Avg:  <-calTask.GetAverage(),
 			}
-			// TODO panic runtime error ：index out of range [0] with length 0
 			rspCh <- &rsp
 			fmt.Printf("Id:%d Data:%v max:%v min:%v avg:%v\n", rsp.Id, rsp.Data, rsp.Max, rsp.Min, rsp.Avg)
 			time.Sleep(time.Millisecond * 100)
@@ -236,7 +250,7 @@ func worker(workId int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh 
 			fmt.Printf("worker %d exit\n", workId)
 			return
 		default:
-			fmt.Printf("worker %d can not get task, will sleep 200ms\n", workId)
+			// fmt.Printf("worker %d can not get task, will sleep 200ms\n", workId)
 			time.Sleep(200 * time.Millisecond)
 		}
 	}

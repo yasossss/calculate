@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	pb "project01/utils/protocol"
+	pb "github.com/yasossss/calculate/utils/protocol"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -127,7 +127,7 @@ func GetResults1(client pb.ConnectClient) {
 	go func() {
 		defer waitGroup.Done()
 		for {
-			rep, err := stream.Recv()
+			rsp, err := stream.Recv()
 			if err == io.EOF {
 				fmt.Println("Server Closed")
 				break
@@ -135,15 +135,17 @@ func GetResults1(client pb.ConnectClient) {
 			if err != nil {
 				continue
 			}
-			fmt.Println("最大值:", rep.GetMax(), "最小值:", rep.GetMin(), "平均值:", rep.GetAvg())
+			fmt.Printf("id:%d data:%v max:%v min:%v avg:%v\n", rsp.Id, rsp.Data, rsp.Max, rsp.Min, rsp.Avg)
 		}
 	}()
 
 	waitGroup.Add(1)
 	go func() {
 		defer waitGroup.Done()
-		for i := 0; i < 4; i++ {
-			arr := [][]int32{{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}, {-1, 2, 100, -5}}
+		for i := 0; i < 10; i++ {
+			arr := [][]int32{{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}, {-1, 2, 100, -5},
+				{10, 10, 20, 20, 40, 50}, {1, 10, 20, 20, 40, 50}, {100, 10, 20, 20, 40, 50},
+				{1000, 10, 20, 20, 40, 50}, {10000, 10, 20, 20, 40, 50}, {1000000, 10, 20, 20, 40, 50}}
 			err := stream.Send(&pb.Request{
 				Id:   int32(i),
 				Data: arr[i],

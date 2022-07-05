@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	ct "project01/taskbatcher"
 	"time"
+
+	ct "github.com/yasossss/calculate/taskbatcher"
 )
 
 type GrpcRequest struct {
