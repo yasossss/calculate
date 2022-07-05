@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"sync"
 	"time"
 
 	pb "github.com/yasossss/calculate/utils/protocol"
@@ -66,63 +65,8 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
  3.1 一直Recv()到err==io.EOF(即客户端关闭stream)
  3.2 Send()则自己控制什么时候Close 服务端stream没有close 只要跳出循环就算close了。 具体见https://github.com/grpc/grpc-go/issues/444
 */
-func (s *server) GetResults(stream pb.Connect_GetResultsServer) error {
-	// TODO
-	var (
-		waitGroup sync.WaitGroup
-		reqCh     = make(chan pb.Request)
-	)
 
-	waitGroup.Add(1)
-	go func() {
-		defer waitGroup.Done()
-		for req := range reqCh {
-
-			//获取客户端的数据arr，传给calTask进行计算
-			calTask := &ct.CalTask{
-				Data: req.Data,
-			}
-			err := stream.Send(&pb.Response{
-				Id:   req.Id,
-				Data: req.Data,
-				Max:  <-calTask.GetMax(),
-				Min:  <-calTask.GetMin(),
-				Avg:  <-calTask.GetAverage(),
-			})
-
-			if err != nil {
-				fmt.Println("Send error:", err)
-				continue
-			}
-		}
-	}()
-
-	waitGroup.Add(1)
-	go func() {
-		defer waitGroup.Done()
-		for {
-			reqs, err := stream.Recv() // 接收请求的数据
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				log.Fatalf("recv error:%v", err)
-			}
-
-			fmt.Printf("Recved : %v\n", reqs.Reqs)
-			i := 0
-			reqCh <- *reqs.Reqs[i]
-			i++
-		}
-		close(reqCh)
-	}()
-	waitGroup.Wait()
-
-	//返回nil表示已经完成响应
-	return nil
-}
-
-func (s *server) GetResults1(stream pb.Connect_GetResults1Server) error {
+func (s *server) GetResults1(stream pb.Connect_GetResultsServer) error {
 	// TODO
 	var (
 		// waitGroup sync.WaitGroup

@@ -13,8 +13,8 @@ service Connect {
   // 该服务包含一个 SayHello 方法 HelloRequest、HelloReply分别为该方法的输入与输出
   rpc SayHello (HelloRequest) returns (HelloReply) {}
   // getResults 得到 发送的多组数的最大值最小值和平均值
-  rpc getResults(stream GrpcRequest) returns (stream Response);
-  rpc getResults1(stream Request) returns (stream Response);
+  // rpc getResults(stream GrpcRequest) returns (stream Response);
+  rpc getResults(stream Request) returns (stream Response);
 }
 // 具体的参数定义
 message HelloRequest {
