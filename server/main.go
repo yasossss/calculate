@@ -66,7 +66,7 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
  3.2 Send()则自己控制什么时候Close 服务端stream没有close 只要跳出循环就算close了。 具体见https://github.com/grpc/grpc-go/issues/444
 */
 
-func (s *server) GetResults1(stream pb.Connect_GetResultsServer) error {
+func (s *server) GetResults(stream pb.Connect_GetResultsServer) error {
 	// TODO
 	var (
 		// waitGroup sync.WaitGroup
