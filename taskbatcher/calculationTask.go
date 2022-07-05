@@ -14,7 +14,7 @@ type CalTask struct {
 
 func (ct *CalTask) GetMin() chan int32 {
 	ch := make(chan int32, 1)
-	ct.Min = ct.Data[0]
+	ct.Min = ct.Data[0] //假设第一个为最小值
 	go func() {
 		//计算最小值
 		for _, num := range ct.Data {
@@ -30,7 +30,7 @@ func (ct *CalTask) GetMin() chan int32 {
 
 func (ct *CalTask) GetMax() chan int32 {
 	ch := make(chan int32, 1)
-	ct.Max = ct.Data[0]
+	ct.Max = ct.Data[0] //假设第一个为最大值
 	go func() {
 		//计算最大值
 		for _, num := range ct.Data {

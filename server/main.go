@@ -25,6 +25,24 @@ const (
 	PORT = ":50001"
 )
 
+// 自定义一个Request和Response区别pb.Request, pb.Response
+type GrpcRequest struct {
+	Reqs []Request
+}
+
+type Request struct {
+	Id   int
+	Data []int32
+}
+
+type Response struct {
+	Id      int
+	Data    []int32
+	Max     int32
+	Min     int32
+	Average int32
+}
+
 // 定义空结构体，关联server服务
 // 新版本 gRPC 要求必须嵌入 pb.UnimplementedConnectServer 结构体
 type server struct {
@@ -105,10 +123,10 @@ func (s *server) GetResults(stream pb.Connect_GetResultsServer) error {
 func (s *server) GetResults1(stream pb.Connect_GetResults1Server) error {
 	// TODO
 	var (
-		waitGroup sync.WaitGroup
-		reqCh     = make(chan pb.Request)
-		rspCh     = make(chan pb.Response)
-		stopCh    = make(chan struct{})
+		// waitGroup sync.WaitGroup
+		reqCh  = make(chan *pb.Request)
+		rspCh  = make(chan *pb.Response)
+		stopCh = make(chan struct{})
 	)
 	// 5 means numbers of goroutine
 	for i := 0; i < 5; i++ {
@@ -117,12 +135,12 @@ func (s *server) GetResults1(stream pb.Connect_GetResults1Server) error {
 	}
 	// len(Request) = len(Response) = 4
 	rsps := make([]pb.Response, 0, 4)
-	waitGroup.Add(1)
+	// waitGroup.Add(1)
 	go func() {
-		defer waitGroup.Done()
+		// defer waitGroup.Done()
 		for rsp := range rspCh {
-			rsps = append(rsps, rsp)
-			fmt.Println(rsp.String())
+			rsps = append(rsps, *rsp)
+			// fmt.Println(rsp.String())
 			if len(rsps) == 4 {
 				close(stopCh)
 				return
@@ -146,9 +164,9 @@ func (s *server) GetResults1(stream pb.Connect_GetResults1Server) error {
 		}
 	}()
 
-	waitGroup.Add(1)
+	// waitGroup.Add(1)
 	go func() {
-		defer waitGroup.Done()
+		// defer waitGroup.Done()
 		for {
 			reqs, err := stream.Recv() // 接收请求的数据
 			if err == io.EOF {
@@ -160,12 +178,12 @@ func (s *server) GetResults1(stream pb.Connect_GetResults1Server) error {
 
 			fmt.Printf("Recved : %v\n", reqs.Data)
 			i := 0
-			reqCh <- *reqs
+			reqCh <- reqs
 			i++
 		}
-		close(reqCh)
+		// close(reqCh)
 	}()
-	waitGroup.Wait()
+	// waitGroup.Wait()
 	// wait for all goroutine exit
 	select {
 	case <-stopCh:
@@ -194,7 +212,7 @@ func main() {
 	s.Serve(lis) //建立连接，开始服务
 }
 
-func worker(workId int, reqCh chan pb.Request, rspCh chan pb.Response, stopCh chan struct{}) {
+func worker(workId int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh chan struct{}) {
 	for {
 		select {
 		case req := <-reqCh:
@@ -202,13 +220,16 @@ func worker(workId int, reqCh chan pb.Request, rspCh chan pb.Response, stopCh ch
 			calTask := ct.CalTask{
 				Data: req.Data,
 			}
-			rspCh <- pb.Response{
+			rsp := pb.Response{
 				Id:   req.Id,
 				Data: req.Data,
 				Max:  <-calTask.GetMax(),
 				Min:  <-calTask.GetMin(),
 				Avg:  <-calTask.GetAverage(),
 			}
+			// TODO panic runtime error ：index out of range [0] with length 0
+			rspCh <- &rsp
+			fmt.Printf("Id:%d Data:%v max:%v min:%v avg:%v\n", rsp.Id, rsp.Data, rsp.Max, rsp.Min, rsp.Avg)
 			time.Sleep(time.Millisecond * 100)
 
 		case <-stopCh:
