@@ -2,8 +2,8 @@
 syntax = "proto3";
 
 
-// // 将编译后文件输出在 /usr/local/gopath/src/project01/utils/protocol 目录
-option go_package = "/usr/local/gopath/src/project01/utils/protocol";
+// // 将编译后文件输出在 /root/calculate/utils/protocol 目录
+option go_package = "/root/calculate/utils/protocol";
 
 // 指定当前proto文件属于protocol包
 package protocol;
@@ -14,7 +14,7 @@ service Connect {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
   // getResults 得到 发送的多组数的最大值最小值和平均值
   // rpc getResults(stream Request) returns (stream Response);
-  rpc getResults(Request) returns (Response);
+  rpc GetResults(GrpcRequest) returns (GrpcResponse);
 }
 // 具体的参数定义
 message HelloRequest {

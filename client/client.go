@@ -88,7 +88,12 @@ func main() {
 		// 调用GetResults方法
 		calRequest := EndPointRequest{
 			Method: GetResults,
-			Req:    &pb.Request{Id: int32(i), Data: arr[i]},
+			Req: &pb.GrpcRequest{
+				Reqs: []*pb.Request{&pb.Request{
+					Id:   int32(i),
+					Data: arr[i],
+				}},
+			},
 		}
 		calRsp, err := retry(ctx, calRequest)
 		if err != nil {
@@ -113,8 +118,9 @@ func reqFactory(instanceAddr string) (endpoint.Endpoint, io.Closer, error) {
 		defer conn.Close()
 
 		client := pb.NewConnectClient(conn)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
+		context.Background()
+		// ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)   ***context deadline exceeded
+		// defer cancel()
 
 		req, _ := request.(EndPointRequest)
 		switch req.Method {
@@ -122,7 +128,7 @@ func reqFactory(instanceAddr string) (endpoint.Endpoint, io.Closer, error) {
 			helloReq, _ := req.Req.(*pb.HelloRequest)
 			return client.SayHello(ctx, helloReq)
 		case GetResults:
-			calRequest, _ := req.Req.(*pb.Request)
+			calRequest, _ := req.Req.(*pb.GrpcRequest)
 			return client.GetResults(ctx, calRequest)
 		default:
 			return nil, fmt.Errorf("unsupport method: %s", req.Method)

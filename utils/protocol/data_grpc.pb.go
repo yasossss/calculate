@@ -26,7 +26,7 @@ type ConnectClient interface {
 	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
 	// getResults 得到 发送的多组数的最大值最小值和平均值
 	// rpc getResults(stream Request) returns (stream Response);
-	GetResults(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	GetResults(ctx context.Context, in *GrpcRequest, opts ...grpc.CallOption) (*GrpcResponse, error)
 }
 
 type connectClient struct {
@@ -46,9 +46,9 @@ func (c *connectClient) SayHello(ctx context.Context, in *HelloRequest, opts ...
 	return out, nil
 }
 
-func (c *connectClient) GetResults(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
-	err := c.cc.Invoke(ctx, "/protocol.Connect/getResults", in, out, opts...)
+func (c *connectClient) GetResults(ctx context.Context, in *GrpcRequest, opts ...grpc.CallOption) (*GrpcResponse, error) {
+	out := new(GrpcResponse)
+	err := c.cc.Invoke(ctx, "/protocol.Connect/GetResults", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ type ConnectServer interface {
 	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
 	// getResults 得到 发送的多组数的最大值最小值和平均值
 	// rpc getResults(stream Request) returns (stream Response);
-	GetResults(context.Context, *Request) (*Response, error)
+	GetResults(context.Context, *GrpcRequest) (*GrpcResponse, error)
 	mustEmbedUnimplementedConnectServer()
 }
 
@@ -74,7 +74,7 @@ type UnimplementedConnectServer struct {
 func (UnimplementedConnectServer) SayHello(context.Context, *HelloRequest) (*HelloReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SayHello not implemented")
 }
-func (UnimplementedConnectServer) GetResults(context.Context, *Request) (*Response, error) {
+func (UnimplementedConnectServer) GetResults(context.Context, *GrpcRequest) (*GrpcResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetResults not implemented")
 }
 func (UnimplementedConnectServer) mustEmbedUnimplementedConnectServer() {}
@@ -109,7 +109,7 @@ func _Connect_SayHello_Handler(srv interface{}, ctx context.Context, dec func(in
 }
 
 func _Connect_GetResults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
+	in := new(GrpcRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -118,10 +118,10 @@ func _Connect_GetResults_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/protocol.Connect/getResults",
+		FullMethod: "/protocol.Connect/GetResults",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConnectServer).GetResults(ctx, req.(*Request))
+		return srv.(ConnectServer).GetResults(ctx, req.(*GrpcRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -138,7 +138,7 @@ var Connect_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Connect_SayHello_Handler,
 		},
 		{
-			MethodName: "getResults",
+			MethodName: "GetResults",
 			Handler:    _Connect_GetResults_Handler,
 		},
 	},

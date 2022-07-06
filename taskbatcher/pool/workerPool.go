@@ -2,6 +2,7 @@ package pool
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	ct "github.com/yasossss/calculate/taskbatcher"
@@ -9,7 +10,12 @@ import (
 )
 
 // 协程池
-func WorkerPool(workerNum int, RequestNum int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh chan struct{}) {
+func WorkerPool(workerNum int, RequestNum int, in *pb.GrpcRequest) pb.GrpcResponse {
+	var (
+		reqCh  = make(chan *pb.Request)
+		rspCh  = make(chan *pb.Response)
+		stopCh = make(chan struct{})
+	)
 	// 5 (workerNum) means numbers of goroutine
 	for i := 0; i < workerNum; i++ {
 		workerId := i
@@ -17,13 +23,13 @@ func WorkerPool(workerNum int, RequestNum int, reqCh chan *pb.Request, rspCh cha
 	}
 
 	// len(Request) = len(Response) = 20 (RequestNum)
-	rsps := make([]*pb.Response, 0, RequestNum)
+	resps := make([]*pb.Response, 0, RequestNum)
 	go func() {
 		for {
 			select {
 			case rsp := <-rspCh:
-				rsps = append(rsps, rsp)
-				if len(rsps) == RequestNum {
+				resps = append(resps, rsp)
+				if len(resps) == RequestNum {
 					close(stopCh)
 					return
 				}
@@ -33,19 +39,21 @@ func WorkerPool(workerNum int, RequestNum int, reqCh chan *pb.Request, rspCh cha
 		}
 	}()
 
-	for i := 0; i < 20; i++ {
-		req := pb.Request{Id: int32(i)}
-		reqCh <- &req
+	for i := 0; i < RequestNum; i++ {
+		req := in.Reqs[i]
+		log.Print("req", req.String())
+		reqCh <- req
 	}
 
 	// wait for all goroutine exit
 	select {
 	case <-stopCh:
-		fmt.Printf("finish task total: %+v\n", len(rsps))
+		fmt.Printf("finish task total: %+v\n", len(resps))
 	}
 
-	// to see if all goroutine exit
-	time.Sleep(time.Second * 2)
+	return pb.GrpcResponse{Resps: resps}
+	// // to see if all goroutine exit 看到后面的log加的，实际中并不需要
+	// time.Sleep(time.Second * 2)
 }
 
 func worker(workId int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh chan struct{}) {
@@ -56,7 +64,8 @@ func worker(workId int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh 
 			calTask := &ct.CalTask{
 				Data: req.Data,
 			}
-			rspCh <- &pb.Response{Id: req.Id,
+			rspCh <- &pb.Response{
+				Id:   req.Id,
 				Data: req.Data,
 				Max:  <-calTask.GetMax(),
 				Min:  <-calTask.GetMin(),
@@ -66,8 +75,8 @@ func worker(workId int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh 
 			fmt.Printf("worker %d exit\n", workId)
 			return
 		default:
-			fmt.Printf("worker %d can not get task, will sleep 200ms\n", workId)
-			time.Sleep(200 * time.Millisecond)
+			// fmt.Printf("worker %d can not get task, will sleep 200ms\n", workId)
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }

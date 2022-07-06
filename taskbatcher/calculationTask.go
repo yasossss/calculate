@@ -7,12 +7,11 @@ import (
 // 计算任务 用于计算一组数的最大值、最小值、平均值
 type CalTask struct {
 	Data []int32
-	// 任务起始位置
 	// 结果
 	Max, Min, Average, Sum int32
 }
 
-func (ct *CalTask) GetMin() chan int32 {
+func (ct *CalTask) GetMin() chan int32 { // TODO 没必要chan，返回一个int32即可
 	ch := make(chan int32, 1)
 	ct.Min = ct.Data[0] //假设第一个为最小值
 	go func() {

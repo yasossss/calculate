@@ -26,18 +26,14 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
-func (s *server) GetResults(ctx context.Context, in *pb.Request) (*pb.Response, error) {
-	var (
-		// waitGroup sync.WaitGroup
-		reqCh  = make(chan *pb.Request)
-		rspCh  = make(chan *pb.Response)
-		stopCh = make(chan struct{})
-	)
+func (s *server) GetResults(ctx context.Context, in *pb.GrpcRequest) (*pb.GrpcResponse, error) {
 
-	pool.WorkerPool(5, 20, reqCh, rspCh, stopCh)
-	log.Printf("GetResults Received: %v: %v", in.Id, in.Data)
-	rsp := <-rspCh
-	return rsp, nil
+	log.Printf("GetResults Received: %v: ", in.Reqs)
+
+	resps := pool.WorkerPool(5, 10, in)
+
+	fmt.Printf("resps.String(): %v\n", resps.String())
+	return &resps, nil
 }
 
 func main() {
