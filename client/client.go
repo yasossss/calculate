@@ -70,8 +70,8 @@ func main() {
 	// 获取Endpoint用来进行grpc调用
 	retry := lb.Retry(3, 3*time.Second, balancer)
 
-	// 模拟调用10次SayHello和10次SayByte，这20个请求依次轮询发送到不同的服务端
-	for i := 0; i < 10; i++ {
+	// 模拟调用5次SayHello和5次SayByte，这10个请求依次轮询发送到不同的服务端
+	for i := 0; i < 5; i++ {
 		// 调用SayHello方法
 		helloRequest := EndPointRequest{
 			Method: SayHello,
@@ -89,10 +89,23 @@ func main() {
 		calRequest := EndPointRequest{
 			Method: GetResults,
 			Req: &pb.GrpcRequest{
-				Reqs: []*pb.Request{&pb.Request{
-					Id:   int32(i),
-					Data: arr[i],
-				}},
+				Reqs: []*pb.Request{
+					&pb.Request{
+						Id:   0,
+						Data: arr[0],
+					}, &pb.Request{
+						Id:   int32(1),
+						Data: arr[1],
+					}, &pb.Request{
+						Id:   int32(2),
+						Data: arr[2],
+					}, &pb.Request{
+						Id:   int32(3),
+						Data: arr[3],
+					}, &pb.Request{
+						Id:   int32(4),
+						Data: arr[4],
+					}},
 			},
 		}
 		calRsp, err := retry(ctx, calRequest)
@@ -101,7 +114,7 @@ func main() {
 			continue
 		}
 		response, _ := calRsp.(*pb.Response)
-		fmt.Println("Greeting: ", response)
+		fmt.Println("calculate result: ", response)
 
 		time.Sleep(time.Second)
 	}

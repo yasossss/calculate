@@ -28,9 +28,9 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 
 func (s *server) GetResults(ctx context.Context, in *pb.GrpcRequest) (*pb.GrpcResponse, error) {
 
-	log.Printf("GetResults Received: %v: ", in.Reqs)
+	log.Printf("GetResults Received: %v ", in)
 
-	resps := pool.WorkerPool(5, 10, in)
+	resps := pool.WorkerPool(5, in)
 
 	fmt.Printf("resps.String(): %v\n", resps.String())
 	return &resps, nil

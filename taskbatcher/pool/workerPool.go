@@ -10,7 +10,7 @@ import (
 )
 
 // 协程池
-func WorkerPool(workerNum int, RequestNum int, in *pb.GrpcRequest) pb.GrpcResponse {
+func WorkerPool(workerNum int, in *pb.GrpcRequest) pb.GrpcResponse {
 	var (
 		reqCh  = make(chan *pb.Request)
 		rspCh  = make(chan *pb.Response)
@@ -23,13 +23,13 @@ func WorkerPool(workerNum int, RequestNum int, in *pb.GrpcRequest) pb.GrpcRespon
 	}
 
 	// len(Request) = len(Response) = 20 (RequestNum)
-	resps := make([]*pb.Response, 0, RequestNum)
+	resps := make([]*pb.Response, 0, len(in.Reqs))
 	go func() {
 		for {
 			select {
 			case rsp := <-rspCh:
 				resps = append(resps, rsp)
-				if len(resps) == RequestNum {
+				if len(resps) == len(in.Reqs) {
 					close(stopCh)
 					return
 				}
@@ -39,9 +39,9 @@ func WorkerPool(workerNum int, RequestNum int, in *pb.GrpcRequest) pb.GrpcRespon
 		}
 	}()
 
-	for i := 0; i < RequestNum; i++ {
+	for i := 0; i < len(in.Reqs); i++ {
 		req := in.Reqs[i]
-		log.Print("req", req.String())
+		log.Print("req :", req.String())
 		reqCh <- req
 	}
 
