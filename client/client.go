@@ -113,8 +113,8 @@ func main() {
 			fmt.Println(err)
 			continue
 		}
-		response, _ := calRsp.(*pb.Response)
-		fmt.Println("calculate result: ", response)
+		response, _ := calRsp.(*pb.GrpcResponse)
+		fmt.Println("calculate result: ", response.String())
 
 		time.Sleep(time.Second)
 	}
@@ -142,6 +142,7 @@ func reqFactory(instanceAddr string) (endpoint.Endpoint, io.Closer, error) {
 			return client.SayHello(ctx, helloReq)
 		case GetResults:
 			calRequest, _ := req.Req.(*pb.GrpcRequest)
+			// log.Print("1. calRequest:", calRequest)
 			return client.GetResults(ctx, calRequest)
 		default:
 			return nil, fmt.Errorf("unsupport method: %s", req.Method)
