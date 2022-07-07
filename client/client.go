@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/go-kit/kit/sd/etcdv3"
 	"github.com/go-kit/kit/sd/lb"
 	kitLog "github.com/go-kit/log"
-	common "github.com/yasossss/calculate/utils/common"
 	pb "github.com/yasossss/calculate/utils/protocol"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -83,7 +83,7 @@ func main() {
 		var reqs []*pb.Request
 		var arrs [][]int32
 		for j := 0; j < num; j++ {
-			arr := common.GenRandIntArr(size) // 随机生成数组（0-100）
+			arr := GenRandIntArr(size) // 随机生成数组（0-100）
 			arrs = append(arrs, arr)
 		}
 
@@ -135,4 +135,14 @@ func reqFactory(instanceAddr string) (endpoint.Endpoint, io.Closer, error) {
 			return nil, fmt.Errorf("unsupport method: %s", req.Method)
 		}
 	}, nil, nil
+}
+
+// 通过传入数组的长度， 随机生成一个传入长度的数组（数字在0-100之间）
+func GenRandIntArr(length int) []int32 {
+	nums := make([]int32, length)
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < length; i++ {
+		nums[i] = int32(rand.Intn(100))
+	}
+	return nums
 }
