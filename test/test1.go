@@ -87,9 +87,9 @@ func worker(workId int, reqCh chan Request, rspCh chan Response, stopCh chan str
 			rspCh <- Response{
 				Id:      req.Id,
 				Data:    req.Data,
-				Max:     <-calTask.GetMax(),
-				Min:     <-calTask.GetMin(),
-				Average: <-calTask.GetAverage(),
+				Max:     calTask.GetMax(),
+				Min:     calTask.GetMin(),
+				Average: calTask.GetAverage(),
 			}
 			time.Sleep(time.Millisecond * 100)
 

@@ -61,31 +61,15 @@ func main() {
 	// 创建端点管理器， 此管理器根据Factory和监听的到实例创建endPoint并订阅instancer的变化动态更新Factory创建的endPoint
 	endpointer := sd.NewEndpointer(instancer, reqFactory, logger) // reqFactory 是自定义的业务处理函数
 
-	// 创建轮询负载均衡器
+	// (1)创建轮询负载均衡器
 	balancer := lb.NewRoundRobin(endpointer)
 
-	// 随机
-	// balancer := lb.NewRandom(endpointer,64)
+	// (2)创建随机负载均衡器
+	// balancer := lb.NewRandom(endpointer, 100)
 
 	// 获取Endpoint用来进行grpc调用
 	retry := lb.Retry(3, 3*time.Second, balancer)
 
-	// arrs := input.InputArrays()      // 输入多组数
-	// var arrs [][]int32
-	// 随机生成数
-	// for i := 0; i < 2; i++ {
-	// 	arr := input.GenRandIntArr(5)
-	// 	arrs = append(arrs, arr)
-	// }
-
-	// var reqs []*pb.Request
-	// for _, arr := range arrs {
-	// 	reqs = append(reqs, &pb.Request{Data: arr})
-	// }
-	// arrays := input.SplitArray(arrs, 2) // 分发
-	// 模拟调用5次调用GetResults方法，这5个请求依次轮询发送到不同的服务端
-	// for i := 0; i < 5; i++ {
-	//
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("请输入每次生成数组的个数")
 	scanner.Scan()

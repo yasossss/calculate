@@ -66,9 +66,9 @@ func worker(workId int, reqCh chan *pb.Request, rspCh chan *pb.Response, stopCh 
 			rspCh <- &pb.Response{
 				Id:   req.Id,
 				Data: req.Data,
-				Max:  <-calTask.GetMax(),
-				Min:  <-calTask.GetMin(),
-				Avg:  <-calTask.GetAverage()}
+				Max:  calTask.GetMax(),
+				Min:  calTask.GetMin(),
+				Avg:  calTask.GetAverage()}
 			time.Sleep(time.Millisecond * 100)
 		case <-stopCh:
 			fmt.Printf("worker %d exit\n", workId)
