@@ -32,7 +32,7 @@ func (s *server) GetResults(ctx context.Context, in *pb.GrpcRequest) (*pb.GrpcRe
 
 	resps := pool.WorkerPool(5, in)
 
-	fmt.Printf("resps.String(): %v\n", resps.String())
+	fmt.Printf("resps: %v\n", (resps.Resps))
 	return &resps, nil
 }
 

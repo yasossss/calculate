@@ -2,7 +2,6 @@ package pool
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	ct "github.com/yasossss/calculate/taskbatcher"
@@ -41,15 +40,15 @@ func WorkerPool(workerNum int, in *pb.GrpcRequest) pb.GrpcResponse {
 
 	for i := 0; i < len(in.Reqs); i++ {
 		req := in.Reqs[i]
-		log.Print("req :", req.String())
 		reqCh <- req
 	}
 
 	// wait for all goroutine exit
-	select {
-	case <-stopCh:
-		fmt.Printf("finish task total: %+v\n", len(resps))
-	}
+	// select {
+	// case <-stopCh:
+	// 	fmt.Printf("finish task total: %+v\n", len(resps))
+	// }
+	<-stopCh
 
 	return pb.GrpcResponse{Resps: resps}
 	// // to see if all goroutine exit 看到后面的log加的，实际中并不需要
