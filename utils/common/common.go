@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// 通过传入数组的长度， 随机生成一个传入长度的数组
+// 通过传入数组的长度， 随机生成一个传入长度的数组（数字在0-100之间）
 func GenRandIntArr(length int) []int32 {
 	nums := make([]int32, length)
 	rand.Seed(time.Now().UnixNano())

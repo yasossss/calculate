@@ -99,7 +99,7 @@ func main() {
 		var reqs []*pb.Request
 		var arrs [][]int32
 		for j := 0; j < num; j++ {
-			arr := common.GenRandIntArr(size)
+			arr := common.GenRandIntArr(size) // 随机生成数组（0-100）
 			arrs = append(arrs, arr)
 		}
 
@@ -130,7 +130,7 @@ func main() {
 
 // 通过传入的实例地址  创建对应的请求endPoint
 func reqFactory(instanceAddr string) (endpoint.Endpoint, io.Closer, error) {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(ct context.Context, request interface{}) (interface{}, error) {
 		fmt.Println("请求服务：", instanceAddr)
 		conn, err := grpc.Dial(instanceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
@@ -139,9 +139,9 @@ func reqFactory(instanceAddr string) (endpoint.Endpoint, io.Closer, error) {
 		defer conn.Close()
 
 		client := pb.NewConnectClient(conn)
-		// ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		// defer cancel()
-		context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		// context.Background()
 		req, _ := request.(EndPointRequest)
 		switch req.Method {
 		case GetResults:
