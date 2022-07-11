@@ -21,7 +21,7 @@ func WorkerPool(workerNum int, in *pb.GrpcRequest) pb.GrpcResponse {
 		go worker(workerId, reqCh, rspCh, stopCh)
 	}
 
-	// len(Request) = len(Response) = 20 (RequestNum)
+	// len(Request) = len(Response) = 20 ( len(in.Reqs) )
 	resps := make([]*pb.Response, 0, len(in.Reqs))
 	go func() {
 		for {

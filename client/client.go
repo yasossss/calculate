@@ -21,8 +21,6 @@ import (
 )
 
 const (
-	DefaultName = "casa"
-	SayHello    = "SayHello"
 	GetResults  = "GetResults"
 )
 

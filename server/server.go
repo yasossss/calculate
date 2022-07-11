@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	kitLog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd/etcdv3"
+	kitLog "github.com/go-kit/log"
 	pool "github.com/yasossss/calculate/taskbatcher/pool"
 	pb "github.com/yasossss/calculate/utils/protocol"
 	"google.golang.org/grpc"
@@ -20,6 +20,10 @@ import (
 type server struct {
 	pb.UnimplementedConnectServer
 }
+
+const (
+	defaultWorkerNum = 5
+)
 
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	log.Printf("SayHello Received: %v", in.GetName())
@@ -30,7 +34,7 @@ func (s *server) GetResults(ctx context.Context, in *pb.GrpcRequest) (*pb.GrpcRe
 
 	log.Printf("GetResults Received: %v ", in)
 
-	resps := pool.WorkerPool(5, in)
+	resps := pool.WorkerPool(defaultWorkerNum, in)
 
 	fmt.Printf("resps: %v\n", (resps.Resps))
 	return &resps, nil
@@ -81,7 +85,7 @@ func main() {
 		}
 	}()
 
-	quit := make(chan os.Signal)
+	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Println("Shutdown Server ...")
